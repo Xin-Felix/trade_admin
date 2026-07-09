@@ -34,12 +34,14 @@ export type RefreshTokenResult = {
   };
 };
 
-/** 登录 */
+/** 登录（对接后端 /api/v1/admin/login） */
 export const getLogin = (data?: object) => {
-  return http.request<UserResult>("post", "/login", { data });
+  return http.request<UserResult>("post", "/api/v1/admin/login", { data });
 };
 
-/** 刷新`token` */
+/** 刷新`token`（对接后端 /api/v1/admin/refresh-token） */
 export const refreshTokenApi = (data?: object) => {
-  return http.request<RefreshTokenResult>("post", "/refresh-token", { data });
+  return http.request<RefreshTokenResult>("post", "/api/v1/admin/refresh-token", {
+    data
+  });
 };
