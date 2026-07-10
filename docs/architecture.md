@@ -2,7 +2,7 @@
 
 ## 项目概述
 
-基于 vue-pure-admin 模板的后台管理系统，用于管理股票数据、定时任务、用户权限等。
+基于 vue-pure-admin 模板的后台管理系统，管理股票数据、定时任务、用户权限等。
 
 ## 技术栈
 
@@ -16,149 +16,158 @@
 | Tailwind CSS | 4.1 | 原子化 CSS |
 | ECharts | 6.0 | 图表可视化 |
 | Axios | 1.12 | HTTP 请求 |
-| vue-router | 4.6 | 路由管理 |
 
 ## 目录结构
 
 ```
-trade_admin/
-├── src/
-│   ├── main.ts                # 应用入口
-│   ├── App.vue                # 根组件
-│   ├── api/                   # 后端 API 调用封装
-│   │   ├── user.ts            # 登录/刷新token
-│   │   └── routes.ts          # 动态路由获取
-│   ├── views/                 # 页面组件
-│   │   ├── login/             # 登录页
-│   │   ├── welcome/           # 控制台首页
-│   │   ├── system/            # 系统管理
-│   │   │   ├── user/          # 用户管理（骨架）
-│   │   │   ├── role/          # 角色管理（骨架）
-│   │   │   └── menu/          # 菜单管理（骨架）
-│   │   └── error/             # 错误页面
-│   ├── router/
-│   │   ├── index.ts           # 路由实例 + 守卫
-│   │   └── modules/
-│   │       ├── home.ts        # 静态路由：控制台
-│   │       └── remaining.ts   # 不参与菜单的路由（login/error）
-│   ├── store/modules/
-│   │   ├── user.ts            # 用户状态（登录/登出/刷新token）
-│   │   ├── permission.ts      # 权限/动态路由
-│   │   └── ...                # 其他状态模块
-│   ├── utils/
-│   │   ├── http/index.ts      # Axios 封装（拦截器/自动刷新token）
-│   │   ├── auth.ts            # Token 存储/读取
-│   │   └── ...
-│   ├── layout/                # 后台布局框架
-│   ├── components/            # 公共组件
-│   └── style/                 # 全局样式
-├── mock/                      # Mock 数据（已禁用，走真实后端）
-├── build/                     # Vite 构建配置
-├── vite.config.ts             # Vite 主配置
-├── .env.development           # 开发环境变量
-└── .env.production            # 生产环境变量
+trade_admin/src/
+├── api/                    # 后端 API 调用封装
+│   ├── user.ts             # 登录/刷新token
+│   ├── routes.ts           # 动态路由获取
+│   ├── admin.ts            # 用户管理/菜单管理/角色管理
+│   ├── scheduler.ts        # 定时任务管理
+│   ├── sync.ts             # 数据同步
+│   └── datasource.ts       # 数据源管理（如有）
+├── views/
+│   ├── login/              # 登录页
+│   ├── welcome/            # 控制台首页
+│   ├── data/               # 数据管理模块
+│   │   ├── browser/        # 数据浏览
+│   │   ├── scheduler/      # 定时任务（配置+执行日志双Tab）
+│   │   ├── sync/           # 数据同步（概览+手动触发+表状态）
+│   │   └── source(s)/      # 数据源管理（接口列表+权限检测）
+│   ├── system/             # 系统管理模块
+│   │   ├── user/           # 用户管理
+│   │   ├── role/           # 角色管理
+│   │   └── menu/           # 菜单管理
+│   └── error/              # 错误页面
+├── router/
+│   ├── index.ts            # 路由实例 + 守卫 + 动态路由加载
+│   └── modules/            # 静态路由
+├── store/modules/
+│   ├── user.ts             # 用户状态
+│   └── permission.ts       # 权限/动态路由
+├── utils/
+│   ├── http/index.ts       # Axios 封装（自动刷新token）
+│   └── auth.ts             # Token 存储
+└── layout/                 # 后台布局框架
+```
+
+## 页面功能清单
+
+### 已完成 ✅
+
+| 页面 | 路由 | 功能 |
+|------|------|------|
+| 登录 | /login | 邮箱+密码登录，对接后端 |
+| 控制台 | /welcome | 欢迎页 |
+| 用户管理 | /system/user | 列表+分页+搜索+编辑角色/状态+重置密码 |
+| 角色管理 | /system/role | 角色列表+菜单权限分配 |
+| 菜单管理 | /system/menu | 树形菜单CRUD |
+| 定时任务 | /data/scheduler | 任务列表+编辑配置+启停+手动执行+执行日志Tab |
+| 数据同步 | /data/sync | 概览统计+手动触发13种同步+所有表数据状态 |
+| 数据源管理 | /data/source(s) | 239个接口列表+分类筛选+搜索+权限检测 |
+| 数据浏览 | /data/browser | 本地表数据浏览查询 |
+
+### 菜单结构（数据库 admin_menus）
+
+```
+数据管理 (id=10, rank=5)
+├── 定时任务 (id=11) → DataScheduler → data/scheduler/index
+├── 数据同步 (id=12) → DataSync → data/sync/index
+├── 数据浏览 (id=13) → DataBrowser → data/browser/index
+└── 数据源管理 (id=14) → DataSources → data/sources/index
+
+系统管理 (id=1, rank=10)
+├── 用户管理 (id=2) → SystemUser → system/user/index
+├── 角色管理 (id=3) → SystemRole → system/role/index
+└── 菜单管理 (id=4) → SystemMenu → system/menu/index
 ```
 
 ## 核心机制
 
 ### 认证流程
 
-1. 登录页调用 `POST /api/v1/admin/login`（username + password）
-2. 后端返回 `{ success, data: { accessToken, refreshToken, expires, roles, permissions } }`
-3. 前端存储 token 到 localStorage
-4. 后续请求通过 Axios 拦截器自动附加 `Authorization: Bearer <token>`
-5. Token 过期时自动调用 `POST /api/v1/admin/refresh-token` 刷新
+1. `POST /api/v1/admin/login` → 返回 accessToken/refreshToken/roles/permissions
+2. Token 存 localStorage，Axios 拦截器自动附加 Authorization header
+3. Token 过期时自动调 `/api/v1/admin/refresh-token` 刷新
+4. 登录后调 `GET /api/v1/admin/async-routes` 加载动态菜单
 
 ### 动态路由
 
-1. 登录成功后调用 `GET /api/v1/admin/async-routes`
-2. 后端根据用户角色返回菜单树（从 `admin_menus` 表查询）
-3. 前端将菜单树转换为 vue-router 路由并动态注册
-4. 菜单数据格式：
+后端 `admin_menus` 表存菜单树 → 前端登录后请求 → 转为 vue-router 路由动态注册。
+
+菜单数据格式：
 ```json
 {
-  "path": "/system",
-  "name": "System",
-  "component": "",
-  "redirect": "/system/user",
-  "meta": { "title": "系统管理", "icon": "ep/setting" },
-  "children": [
-    {
-      "path": "/system/user",
-      "name": "SystemUser",
-      "component": "system/user/index",
-      "meta": { "title": "用户管理", "icon": "ep/user" }
-    }
-  ]
+  "path": "/data/scheduler/index",
+  "name": "DataScheduler",
+  "component": "data/scheduler/index",
+  "meta": { "title": "定时任务", "icon": "ep:timer" }
 }
 ```
 
 ### 权限控制
 
-- **页面级**：通过 `meta.roles` 控制路由访问（路由守卫检查）
-- **按钮级**：通过 `permissions` 数组控制按钮显示（如 `system:user:add`）
-- admin 角色拥有所有权限（`*:*:*`）
+- 页面级：路由 `meta.roles` + 路由守卫
+- 按钮级：`permissions` 数组（如 `system:user:add`）
+- admin 角色：`*:*:*` 全部权限
+
+## 后端 API 对接清单
+
+### 认证
+- `POST /api/v1/admin/login` — 登录
+- `POST /api/v1/admin/refresh-token` — 刷新token
+- `GET /api/v1/admin/async-routes` — 动态菜单
+
+### 用户管理
+- `GET /api/v1/admin/users` — 列表（分页+搜索+角色筛选）
+- `PUT /api/v1/admin/users/:id` — 编辑
+- `PUT /api/v1/admin/users/:id/reset-password` — 重置密码
+
+### 菜单管理
+- `GET /api/v1/admin/menus` — 菜单树
+- `POST /api/v1/admin/menus` — 新增
+- `PUT /api/v1/admin/menus/:id` — 编辑
+- `DELETE /api/v1/admin/menus/:id` — 删除
+
+### 角色管理
+- `GET /api/v1/admin/roles` — 角色列表
+- `PUT /api/v1/admin/roles/:role/menus` — 分配菜单权限
+
+### 定时任务
+- `GET /api/v1/scheduler/jobs` — 任务列表
+- `GET /api/v1/scheduler/available` — 可配置任务类型
+- `POST /api/v1/scheduler/jobs` — 创建/更新配置
+- `PUT /api/v1/scheduler/jobs/:id/toggle` — 启用/禁用
+- `POST /api/v1/scheduler/jobs/:id/run` — 立即执行
+- `DELETE /api/v1/scheduler/jobs/:id` — 删除
+- `GET /api/v1/scheduler/logs` — 执行日志
+
+### 数据同步
+- `GET /api/v1/sync/status` — 所有本地表数据概况
+- `POST /api/v1/sync/recent` — 综合同步
+- `POST /api/v1/sync/{type}` — 按类型同步（daily-kline/daily-basic/...）
+
+### 数据源
+- `GET /api/v1/datasource/list` — 接口列表
+- `GET /api/v1/datasource/categories` — 分类列表
+- `POST /api/v1/datasource/check-permission` — 批量权限检测
 
 ## 开发环境
 
 ```bash
-# 安装依赖
 pnpm install
-
-# 启动开发服务（端口 8848）
-pnpm dev
-
-# 构建生产包
-pnpm build
+pnpm dev          # http://localhost:8848
+pnpm build        # 生产构建
 ```
 
-开发环境通过 Vite proxy 将 `/api` 请求代理到 `http://127.0.0.1:8000`（后端）。
-
-## 当前开发状态
-
-### 已完成
-- [x] 项目框架搭建（vue-pure-admin）
-- [x] 登录页面 + 对接后端认证
-- [x] 动态路由加载（对接后端 async-routes）
-- [x] Token 自动刷新机制
-- [x] 后台布局框架
-
-### 待开发
-- [ ] 用户管理页面（CRUD 表格 + 编辑弹窗）
-- [ ] 角色管理页面（角色列表 + 菜单权限分配）
-- [ ] 菜单管理页面（树形表格 + 新增/编辑菜单）
-- [ ] 调度管理页面（任务列表 + 配置定时 + 手动触发）
-- [ ] 数据同步监控页面
-- [ ] 控制台仪表盘（数据概览图表）
-
-## 后端 API 对接清单
-
-### 已对接
-| 前端调用 | 后端接口 | 说明 |
-|---------|---------|------|
-| `POST /api/v1/admin/login` | admin.py | 管理员登录 |
-| `POST /api/v1/admin/refresh-token` | admin.py | 刷新 token |
-| `GET /api/v1/admin/async-routes` | admin.py | 获取动态路由菜单 |
-
-### 待对接
-| 前端页面 | 后端接口 | 说明 |
-|---------|---------|------|
-| 用户管理 | `GET /api/v1/admin/users` | 用户列表（分页+搜索） |
-| 用户管理 | `PUT /api/v1/admin/users/:id` | 编辑用户 |
-| 用户管理 | `PUT /api/v1/admin/users/:id/reset-password` | 重置密码 |
-| 调度管理 | `GET /api/v1/scheduler/available` | 可配置任务列表 |
-| 调度管理 | `GET /api/v1/scheduler/jobs` | 当前任务列表 |
-| 调度管理 | `POST /api/v1/scheduler/cron` | 创建 cron 任务 |
-| 调度管理 | `POST /api/v1/scheduler/interval` | 创建间隔任务 |
-| 调度管理 | `POST /api/v1/scheduler/run/:id` | 立即执行 |
-| 调度管理 | `POST /api/v1/scheduler/pause/:id` | 暂停任务 |
-| 调度管理 | `POST /api/v1/scheduler/resume/:id` | 恢复任务 |
-| 调度管理 | `DELETE /api/v1/scheduler/:id` | 删除任务 |
+Vite proxy 配置：`/api` → `http://127.0.0.1:8000`
 
 ## 约定
 
-- 组件命名：PascalCase（如 `SystemUser`）
+- 组件命名：PascalCase（`DataScheduler`）
 - API 文件：按模块划分（`src/api/`）
-- 状态管理：按功能模块划分（`src/store/modules/`）
-- 路由：静态路由放 `router/modules/`，动态路由从后端获取
-- 样式：优先 Tailwind CSS，复杂场景用 SCSS
+- 路由：静态放 `router/modules/`，动态从后端获取
+- 样式：优先 Tailwind，复杂用 SCSS
+- 测试账号：`1538933906@qq.com` / `123456`（admin角色）

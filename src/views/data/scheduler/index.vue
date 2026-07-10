@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { http } from "@/utils/http";
 import {
   getJobConfigs,
   getAvailableJobs,
@@ -18,46 +17,11 @@ defineOptions({
   name: "DataScheduler"
 });
 
-const activeTab = ref("tasks");
 const loading = ref(false);
 const jobList = ref<JobConfig[]>([]);
 const availableJobs = ref<AvailableJob[]>([]);
 
-// ====== 执行日志 ======
-const logLoading = ref(false);
-const logList = ref<any[]>([]);
-const logTotal = ref(0);
-const logPage = ref(1);
-const logJobFilter = ref("");
-
-async function fetchLogs() {
-  logLoading.value = true;
-  try {
-    const params: any = { page: logPage.value, page_size: 20 };
-    if (logJobFilter.value) params.job_id = logJobFilter.value;
-    const res = await http.request<any>("get", "/api/v1/scheduler/logs", {
-      params
-    });
-    if (res.success) {
-      logList.value = res.data.list;
-      logTotal.value = res.data.total;
-    }
-  } finally {
-    logLoading.value = false;
-  }
-}
-
-function handleLogPageChange(p: number) {
-  logPage.value = p;
-  fetchLogs();
-}
-
-function handleLogFilter() {
-  logPage.value = 1;
-  fetchLogs();
-}
-
-// ====== 任务配置 ======
+// 编辑弹窗
 const dialogVisible = ref(false);
 const dialogTitle = ref("编辑任务");
 const formData = reactive<JobConfigForm>({
@@ -180,132 +144,62 @@ function formatTrigger(row: JobConfig): string {
   return `每 ${parts.join("")}`;
 }
 
-function statusTagType(status: string) {
-  if (status === "success") return "success";
-  if (status === "failed") return "danger";
-  if (status === "running") return "warning";
-  return "info";
-}
-
 onMounted(() => {
   fetchData();
-  fetchLogs();
 });
 </script>
 
 <template>
   <div class="p-4">
-    <el-tabs v-model="activeTab">
-      <!-- 任务配置 Tab -->
-      <el-tab-pane label="任务配置" name="tasks">
-        <el-card shadow="never">
-          <template #header>
-            <div class="flex items-center justify-between">
-              <span class="font-semibold">定时任务列表</span>
-              <el-button type="primary" size="small" @click="fetchData" :loading="loading">
-                刷新
-              </el-button>
-            </div>
+    <el-card shadow="never">
+      <template #header>
+        <div class="flex items-center justify-between">
+          <span class="font-semibold text-lg">定时任务配置</span>
+          <el-button type="primary" size="small" @click="fetchData" :loading="loading">
+            刷新
+          </el-button>
+        </div>
+      </template>
+
+      <el-table :data="jobList" v-loading="loading" stripe size="small">
+        <el-table-column prop="description" label="任务名称" min-width="220" />
+        <el-table-column label="触发方式" width="180">
+          <template #default="{ row }">
+            <el-tag size="small">{{ formatTrigger(row) }}</el-tag>
           </template>
-
-          <el-table :data="jobList" v-loading="loading" stripe size="small">
-            <el-table-column prop="description" label="任务名称" min-width="200" />
-            <el-table-column label="触发方式" width="180">
-              <template #default="{ row }">
-                <el-tag size="small">{{ formatTrigger(row) }}</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="days" label="天数" width="70" align="center" />
-            <el-table-column label="状态" width="70" align="center">
-              <template #default="{ row }">
-                <el-tag :type="row.enabled ? 'success' : 'info'" size="small">
-                  {{ row.enabled ? '启用' : '禁用' }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="下次执行" width="170">
-              <template #default="{ row }">
-                <span v-if="row.next_run_time" class="text-xs">
-                  {{ row.next_run_time?.replace("T", " ").slice(0, 19) }}
-                </span>
-                <span v-else class="text-gray-400 text-xs">未调度</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="操作" width="260" fixed="right">
-              <template #default="{ row }">
-                <el-button size="small" @click="openEditDialog(row)">编辑</el-button>
-                <el-button
-                  size="small"
-                  :type="row.enabled ? 'warning' : 'success'"
-                  @click="handleToggle(row)"
-                >
-                  {{ row.enabled ? '禁用' : '启用' }}
-                </el-button>
-                <el-button size="small" type="primary" @click="handleRunNow(row)">执行</el-button>
-                <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-        </el-card>
-      </el-tab-pane>
-
-      <!-- 执行日志 Tab -->
-      <el-tab-pane label="执行日志" name="logs">
-        <el-card shadow="never">
-          <template #header>
-            <div class="flex items-center gap-3">
-              <span class="font-semibold">执行日志</span>
-              <el-select
-                v-model="logJobFilter"
-                placeholder="全部任务"
-                style="width: 200px"
-                clearable
-                size="small"
-                @change="handleLogFilter"
-              >
-                <el-option
-                  v-for="job in jobList"
-                  :key="job.job_id"
-                  :label="job.description"
-                  :value="job.job_id"
-                />
-              </el-select>
-              <el-button size="small" @click="fetchLogs" :loading="logLoading">刷新</el-button>
-            </div>
+        </el-table-column>
+        <el-table-column prop="days" label="天数" width="70" align="center" />
+        <el-table-column label="状态" width="70" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row.enabled ? 'success' : 'info'" size="small">
+              {{ row.enabled ? '启用' : '禁用' }}
+            </el-tag>
           </template>
-
-          <el-table :data="logList" v-loading="logLoading" stripe size="small">
-            <el-table-column prop="job_id" label="任务" width="180" />
-            <el-table-column label="状态" width="80" align="center">
-              <template #default="{ row }">
-                <el-tag :type="statusTagType(row.status)" size="small">
-                  {{ row.status }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="message" label="结果/错误" min-width="300" show-overflow-tooltip />
-            <el-table-column label="耗时" width="80" align="center">
-              <template #default="{ row }">
-                <span v-if="row.duration_seconds != null">{{ row.duration_seconds }}s</span>
-                <span v-else class="text-gray-400">-</span>
-              </template>
-            </el-table-column>
-            <el-table-column prop="started_at" label="开始时间" width="160" />
-            <el-table-column prop="finished_at" label="结束时间" width="160" />
-          </el-table>
-
-          <div class="flex justify-end mt-4">
-            <el-pagination
-              :current-page="logPage"
-              :page-size="20"
-              :total="logTotal"
-              layout="total, prev, pager, next"
-              @current-change="handleLogPageChange"
-            />
-          </div>
-        </el-card>
-      </el-tab-pane>
-    </el-tabs>
+        </el-table-column>
+        <el-table-column label="下次执行" width="170">
+          <template #default="{ row }">
+            <span v-if="row.next_run_time" class="text-xs">
+              {{ row.next_run_time?.replace("T", " ").slice(0, 19) }}
+            </span>
+            <span v-else class="text-gray-400 text-xs">未调度</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="260" fixed="right">
+          <template #default="{ row }">
+            <el-button size="small" @click="openEditDialog(row)">编辑</el-button>
+            <el-button
+              size="small"
+              :type="row.enabled ? 'warning' : 'success'"
+              @click="handleToggle(row)"
+            >
+              {{ row.enabled ? '禁用' : '启用' }}
+            </el-button>
+            <el-button size="small" type="primary" @click="handleRunNow(row)">执行</el-button>
+            <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
 
     <!-- 编辑弹窗 -->
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">
