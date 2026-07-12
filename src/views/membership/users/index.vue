@@ -7,8 +7,10 @@ import {
   cancelUserMembership,
   expireMemberships,
   grantMonthlyPoints,
+  getMembershipTiers,
   type UserMembershipItem,
-  type UserMembershipGrantForm
+  type UserMembershipGrantForm,
+  type MembershipTierItem
 } from "@/api/membership";
 
 defineOptions({
@@ -17,6 +19,7 @@ defineOptions({
 
 const loading = ref(false);
 const list = ref<UserMembershipItem[]>([]);
+const tiers = ref<MembershipTierItem[]>([]);
 const filterUserId = ref("");
 const filterStatus = ref("");
 
@@ -42,6 +45,18 @@ async function loadList() {
   }
 }
 
+async function loadTiers() {
+  try {
+    const res = await getMembershipTiers();
+    if (res.success) {
+      tiers.value = res.data;
+    }
+  } catch (e: any) {
+    const detail = e?.response?.data?.detail || "加载会员套餐失败";
+    ElMessage.error(detail);
+  }
+}
+
 function resetForm() {
   form.user_id = "";
   form.tier_code = "";
@@ -59,7 +74,7 @@ function validateForm(): boolean {
     return false;
   }
   if (!form.tier_code) {
-    ElMessage.warning("请输入套餐标识");
+    ElMessage.warning("请选择套餐");
     return false;
   }
   if (!form.duration_days || form.duration_days < 1) {
@@ -144,6 +159,7 @@ function statusLabel(status: string): string {
 
 onMounted(() => {
   loadList();
+  loadTiers();
 });
 </script>
 
@@ -220,7 +236,14 @@ onMounted(() => {
           <el-input v-model.trim="form.user_id" placeholder="用户 public_id" />
         </el-form-item>
         <el-form-item label="套餐标识" required>
-          <el-input v-model="form.tier_code" placeholder="如 vip" />
+          <el-select v-model="form.tier_code" placeholder="请选择套餐" style="width: 100%">
+            <el-option
+              v-for="tier in tiers.filter(t => t.enabled)"
+              :key="tier.code"
+              :label="`${tier.name} (${tier.code})`"
+              :value="tier.code"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="开通天数" required>
           <el-input-number v-model="form.duration_days" :min="1" />
