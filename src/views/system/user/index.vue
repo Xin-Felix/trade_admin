@@ -173,19 +173,26 @@ onMounted(() => {
 
     <!-- 表格 -->
     <el-card shadow="never">
-      <el-table :data="tableData" v-loading="loading" stripe>
+      <el-table v-loading="loading" :data="tableData" stripe>
+        <el-table-column prop="id" label="用户ID" min-width="280" show-overflow-tooltip />
         <el-table-column prop="email" label="邮箱" min-width="200" />
         <el-table-column prop="name" label="名称" min-width="120" />
         <el-table-column prop="role" label="角色" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.role === 'admin' ? 'danger' : 'info'" size="small">
+            <el-tag
+              :type="row.role === 'admin' ? 'danger' : 'info'"
+              size="small"
+            >
               {{ row.role === "admin" ? "管理员" : "用户" }}
             </el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="is_active" label="状态" width="80">
           <template #default="{ row }">
-            <el-tag :type="row.is_active === 1 ? 'success' : 'danger'" size="small">
+            <el-tag
+              :type="row.is_active === 1 ? 'success' : 'danger'"
+              size="small"
+            >
               {{ row.is_active === 1 ? "启用" : "禁用" }}
             </el-tag>
           </template>
@@ -193,7 +200,12 @@ onMounted(() => {
         <el-table-column prop="created_at" label="创建时间" width="170" />
         <el-table-column label="操作" width="220" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" link size="small" @click="handleEdit(row)">
+            <el-button
+              type="primary"
+              link
+              size="small"
+              @click="handleEdit(row)"
+            >
               编辑
             </el-button>
             <el-button
@@ -204,7 +216,12 @@ onMounted(() => {
             >
               {{ row.is_active === 1 ? "禁用" : "启用" }}
             </el-button>
-            <el-button type="danger" link size="small" @click="handleResetPassword(row)">
+            <el-button
+              type="danger"
+              link
+              size="small"
+              @click="handleResetPassword(row)"
+            >
               重置密码
             </el-button>
           </template>

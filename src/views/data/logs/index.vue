@@ -131,7 +131,7 @@ onMounted(() => {
       <template #header>
         <div class="flex items-center justify-between">
           <span class="font-semibold text-lg">执行日志</span>
-          <el-button size="small" @click="fetchLogs" :loading="loading">
+          <el-button size="small" :loading="loading" @click="fetchLogs">
             刷新
           </el-button>
         </div>
@@ -177,11 +177,15 @@ onMounted(() => {
       </div>
 
       <!-- 表格 -->
-      <el-table :data="logList" v-loading="loading" stripe size="small">
+      <el-table v-loading="loading" :data="logList" stripe size="small">
         <el-table-column label="来源" width="60" align="center">
           <template #default="{ row }">
-            <el-tag :type="isManual(row.job_id) ? 'warning' : ''" size="small" effect="plain">
-              {{ isManual(row.job_id) ? '手动' : '定时' }}
+            <el-tag
+              :type="isManual(row.job_id) ? 'warning' : ''"
+              size="small"
+              effect="plain"
+            >
+              {{ isManual(row.job_id) ? "手动" : "定时" }}
             </el-tag>
           </template>
         </el-table-column>
@@ -193,14 +197,27 @@ onMounted(() => {
         <el-table-column label="状态" width="80" align="center">
           <template #default="{ row }">
             <el-tag :type="statusTagType(row.status)" size="small">
-              {{ row.status === 'success' ? '成功' : row.status === 'failed' ? '失败' : '运行中' }}
+              {{
+                row.status === "success"
+                  ? "成功"
+                  : row.status === "failed"
+                    ? "失败"
+                    : "运行中"
+              }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="message" label="结果/错误" min-width="300" show-overflow-tooltip />
+        <el-table-column
+          prop="message"
+          label="结果/错误"
+          min-width="300"
+          show-overflow-tooltip
+        />
         <el-table-column label="耗时" width="80" align="center">
           <template #default="{ row }">
-            <span v-if="row.duration_seconds != null">{{ row.duration_seconds }}s</span>
+            <span v-if="row.duration_seconds != null"
+              >{{ row.duration_seconds }}s</span
+            >
             <span v-else class="text-gray-400">-</span>
           </template>
         </el-table-column>

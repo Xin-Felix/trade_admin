@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from "vue";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ElMessage } from "element-plus";
 import {
   getJobConfigs,
   getAvailableJobs,
   saveJobConfig,
   toggleJob,
   runJobNow,
-  deleteJobConfig,
   type JobConfig,
   type AvailableJob,
   type JobConfigForm
@@ -115,23 +114,6 @@ async function handleRunNow(row: JobConfig) {
   }
 }
 
-async function handleDelete(row: JobConfig) {
-  await ElMessageBox.confirm(
-    `确定要删除任务「${row.description}」吗？`,
-    "确认删除",
-    { type: "warning" }
-  );
-  try {
-    const res = await deleteJobConfig(row.job_id);
-    if (res.success) {
-      ElMessage.success("已删除");
-      fetchData();
-    }
-  } catch (e: any) {
-    ElMessage.error(e?.message || "删除失败");
-  }
-}
-
 function formatTrigger(row: JobConfig): string {
   if (row.trigger_type === "cron") {
     const h = String(row.cron_hour).padStart(2, "0");
@@ -155,13 +137,18 @@ onMounted(() => {
       <template #header>
         <div class="flex items-center justify-between">
           <span class="font-semibold text-lg">定时任务配置</span>
-          <el-button type="primary" size="small" @click="fetchData" :loading="loading">
+          <el-button
+            type="primary"
+            size="small"
+            :loading="loading"
+            @click="fetchData"
+          >
             刷新
           </el-button>
         </div>
       </template>
 
-      <el-table :data="jobList" v-loading="loading" stripe size="small">
+      <el-table v-loading="loading" :data="jobList" stripe size="small">
         <el-table-column prop="description" label="任务名称" min-width="220" />
         <el-table-column label="触发方式" width="180">
           <template #default="{ row }">
@@ -172,7 +159,7 @@ onMounted(() => {
         <el-table-column label="状态" width="70" align="center">
           <template #default="{ row }">
             <el-tag :type="row.enabled ? 'success' : 'info'" size="small">
-              {{ row.enabled ? '启用' : '禁用' }}
+              {{ row.enabled ? "启用" : "禁用" }}
             </el-tag>
           </template>
         </el-table-column>
@@ -184,18 +171,21 @@ onMounted(() => {
             <span v-else class="text-gray-400 text-xs">未调度</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="260" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" @click="openEditDialog(row)">编辑</el-button>
+            <el-button size="small" @click="openEditDialog(row)"
+              >编辑</el-button
+            >
             <el-button
               size="small"
               :type="row.enabled ? 'warning' : 'success'"
               @click="handleToggle(row)"
             >
-              {{ row.enabled ? '禁用' : '启用' }}
+              {{ row.enabled ? "禁用" : "启用" }}
             </el-button>
-            <el-button size="small" type="primary" @click="handleRunNow(row)">执行</el-button>
-            <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
+            <el-button size="small" type="primary" @click="handleRunNow(row)"
+              >执行</el-button
+            >
           </template>
         </el-table-column>
       </el-table>

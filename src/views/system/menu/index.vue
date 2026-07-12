@@ -39,7 +39,11 @@ const flatMenus = computed(() => {
   ];
   function flatten(items: MenuItem[], level: number) {
     for (const item of items) {
-      result.push({ id: item.id, title: "　".repeat(level) + item.title, level });
+      result.push({
+        id: item.id,
+        title: "　".repeat(level) + item.title,
+        level
+      });
       if (item.children?.length) {
         flatten(item.children, level + 1);
       }
@@ -162,8 +166,8 @@ onMounted(() => {
       </div>
 
       <el-table
-        :data="menuTree"
         v-loading="loading"
+        :data="menuTree"
         row-key="id"
         border
         default-expand-all
@@ -178,7 +182,13 @@ onMounted(() => {
         <el-table-column prop="menu_type" label="类型" width="80">
           <template #default="{ row }">
             <el-tag
-              :type="row.menu_type === 0 ? 'warning' : row.menu_type === 1 ? '' : 'info'"
+              :type="
+                row.menu_type === 0
+                  ? 'warning'
+                  : row.menu_type === 1
+                    ? ''
+                    : 'info'
+              "
               size="small"
             >
               {{ menuTypeLabel(row.menu_type) }}
@@ -188,26 +198,46 @@ onMounted(() => {
         <el-table-column prop="path" label="路由路径" min-width="180" />
         <el-table-column prop="component" label="组件" min-width="150">
           <template #default="{ row }">
-            <span class="text-xs text-gray-500">{{ row.component || "-" }}</span>
+            <span class="text-xs text-gray-500">{{
+              row.component || "-"
+            }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="rank" label="排序" width="70" />
         <el-table-column prop="show_link" label="显示" width="70">
           <template #default="{ row }">
-            <el-tag :type="row.show_link === 1 ? 'success' : 'info'" size="small">
+            <el-tag
+              :type="row.show_link === 1 ? 'success' : 'info'"
+              size="small"
+            >
               {{ row.show_link === 1 ? "是" : "否" }}
             </el-tag>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="220" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" link size="small" @click="handleAdd(row.id)">
+            <el-button
+              type="primary"
+              link
+              size="small"
+              @click="handleAdd(row.id)"
+            >
               新增子级
             </el-button>
-            <el-button type="primary" link size="small" @click="handleEdit(row)">
+            <el-button
+              type="primary"
+              link
+              size="small"
+              @click="handleEdit(row)"
+            >
               编辑
             </el-button>
-            <el-button type="danger" link size="small" @click="handleDelete(row)">
+            <el-button
+              type="danger"
+              link
+              size="small"
+              @click="handleDelete(row)"
+            >
               删除
             </el-button>
           </template>
@@ -239,16 +269,28 @@ onMounted(() => {
           <el-input v-model="menuForm.title" placeholder="如：系统管理" />
         </el-form-item>
         <el-form-item label="路由路径" required>
-          <el-input v-model="menuForm.path" placeholder="如：/system/user/index" />
+          <el-input
+            v-model="menuForm.path"
+            placeholder="如：/system/user/index"
+          />
         </el-form-item>
         <el-form-item label="路由名称">
-          <el-input v-model="menuForm.name" placeholder="如：SystemUser（唯一）" />
+          <el-input
+            v-model="menuForm.name"
+            placeholder="如：SystemUser（唯一）"
+          />
         </el-form-item>
-        <el-form-item label="组件路径" v-if="menuForm.menu_type === 1">
-          <el-input v-model="menuForm.component" placeholder="如：system/user/index" />
+        <el-form-item v-if="menuForm.menu_type === 1" label="组件路径">
+          <el-input
+            v-model="menuForm.component"
+            placeholder="如：system/user/index"
+          />
         </el-form-item>
-        <el-form-item label="重定向" v-if="menuForm.menu_type === 0">
-          <el-input v-model="menuForm.redirect" placeholder="如：/system/user/index" />
+        <el-form-item v-if="menuForm.menu_type === 0" label="重定向">
+          <el-input
+            v-model="menuForm.redirect"
+            placeholder="如：/system/user/index"
+          />
         </el-form-item>
         <el-form-item label="图标">
           <el-input v-model="menuForm.icon" placeholder="如：ep:setting" />

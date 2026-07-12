@@ -180,17 +180,21 @@ onMounted(() => {
       <div class="flex justify-between items-center mb-4">
         <div>
           <h3 class="text-base font-medium">角色管理</h3>
-          <p class="text-sm text-gray-400 mt-1">管理系统角色，为角色分配菜单访问权限</p>
+          <p class="text-sm text-gray-400 mt-1">
+            管理系统角色，为角色分配菜单访问权限
+          </p>
         </div>
         <el-button type="primary" @click="handleAddRole">新增角色</el-button>
       </div>
 
-      <el-table :data="roles" v-loading="loading" stripe>
+      <el-table v-loading="loading" :data="roles" stripe>
         <el-table-column prop="role" label="角色标识" width="130" />
         <el-table-column prop="name" label="角色名称" width="150" />
         <el-table-column prop="description" label="描述" min-width="200">
           <template #default="{ row }">
-            <span class="text-sm text-gray-500">{{ row.description || "-" }}</span>
+            <span class="text-sm text-gray-500">{{
+              row.description || "-"
+            }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="user_count" label="用户数" width="100">
@@ -200,14 +204,25 @@ onMounted(() => {
         </el-table-column>
         <el-table-column label="菜单权限" width="160">
           <template #default="{ row }">
-            <span v-if="row.role === 'admin'" class="text-green-600 text-sm">全部权限</span>
-            <span v-else-if="row.menu_ids.length === 0" class="text-gray-400 text-sm">暂未分配</span>
+            <span v-if="row.role === 'admin'" class="text-green-600 text-sm"
+              >全部权限</span
+            >
+            <span
+              v-else-if="row.menu_ids.length === 0"
+              class="text-gray-400 text-sm"
+              >暂未分配</span
+            >
             <span v-else class="text-sm">{{ row.menu_ids.length }} 个菜单</span>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="250" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" link size="small" @click="handleEditRole(row)">
+            <el-button
+              type="primary"
+              link
+              size="small"
+              @click="handleEditRole(row)"
+            >
               编辑
             </el-button>
             <el-button
@@ -234,7 +249,11 @@ onMounted(() => {
     </el-card>
 
     <!-- 新增/编辑角色弹窗 -->
-    <el-dialog v-model="roleDialogVisible" :title="roleDialogTitle" width="480px">
+    <el-dialog
+      v-model="roleDialogVisible"
+      :title="roleDialogTitle"
+      width="480px"
+    >
       <el-form :model="roleForm" label-width="90px">
         <el-form-item label="角色标识" required>
           <el-input

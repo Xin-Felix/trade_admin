@@ -90,11 +90,3 @@ export const runJobNow = (jobId: string, days: number = 1) => {
     { params: { days } }
   );
 };
-
-/** 删除任务配置 */
-export const deleteJobConfig = (jobId: string) => {
-  return http.request<MessageResult>(
-    "delete",
-    `/api/v1/scheduler/jobs/${jobId}`
-  );
-};

@@ -52,8 +52,16 @@ async function fetchStatus() {
 const syncActions = [
   { label: "日K线", type: "daily-kline", jobId: "sync_daily_kline" },
   { label: "日线因子", type: "daily-basic", jobId: "sync_daily_basic" },
-  { label: "板块资金流", type: "sector-moneyflow", jobId: "sync_sector_moneyflow" },
-  { label: "个股资金流", type: "stock-moneyflow", jobId: "sync_stock_moneyflow" },
+  {
+    label: "板块资金流",
+    type: "sector-moneyflow",
+    jobId: "sync_sector_moneyflow"
+  },
+  {
+    label: "个股资金流",
+    type: "stock-moneyflow",
+    jobId: "sync_stock_moneyflow"
+  },
   { label: "指数日线", type: "index-daily", jobId: "sync_index_daily" },
   { label: "沪深港通", type: "hsgt", jobId: "sync_moneyflow_hsgt" },
   { label: "涨跌停", type: "stock-limit", jobId: "sync_stock_limit" },
@@ -116,7 +124,9 @@ onMounted(() => {
         <div class="text-gray-500 text-sm mt-1">本地表总数</div>
       </el-card>
       <el-card shadow="never" class="text-center">
-        <div class="text-2xl font-bold text-green-600">{{ tablesWithData }}</div>
+        <div class="text-2xl font-bold text-green-600">
+          {{ tablesWithData }}
+        </div>
         <div class="text-gray-500 text-sm mt-1">有数据的表</div>
       </el-card>
       <el-card shadow="never" class="text-center">
@@ -145,8 +155,8 @@ onMounted(() => {
             <el-button
               type="danger"
               size="small"
-              @click="handleSyncAll"
               :loading="syncing['all']"
+              @click="handleSyncAll"
             >
               全部同步
             </el-button>
@@ -159,8 +169,8 @@ onMounted(() => {
           v-for="action in syncActions"
           :key="action.jobId"
           size="small"
-          @click="handleSync(action)"
           :loading="syncing[action.jobId]"
+          @click="handleSync(action)"
         >
           {{ action.label }}
         </el-button>
@@ -168,17 +178,21 @@ onMounted(() => {
     </el-card>
 
     <!-- 数据表状态 -->
-    <el-card shadow="never" v-loading="loading">
+    <el-card v-loading="loading" shadow="never">
       <template #header>
         <div class="flex items-center justify-between">
           <span class="font-semibold">数据表概况</span>
-          <el-button size="small" @click="fetchStatus" :loading="loading">
+          <el-button size="small" :loading="loading" @click="fetchStatus">
             刷新
           </el-button>
         </div>
       </template>
 
-      <div v-for="(tables, category) in groupedTables" :key="category" class="mb-4">
+      <div
+        v-for="(tables, category) in groupedTables"
+        :key="category"
+        class="mb-4"
+      >
         <div class="text-sm font-medium text-gray-600 mb-2">{{ category }}</div>
         <el-table :data="tables" stripe size="small" :show-header="true">
           <el-table-column prop="title" label="数据" width="150" />
@@ -189,20 +203,30 @@ onMounted(() => {
           </el-table-column>
           <el-table-column label="数据量" width="120" align="right">
             <template #default="{ row }">
-              <span :class="row.row_count > 0 ? 'text-green-600 font-medium' : 'text-gray-400'">
+              <span
+                :class="
+                  row.row_count > 0
+                    ? 'text-green-600 font-medium'
+                    : 'text-gray-400'
+                "
+              >
                 {{ formatNumber(row.row_count) }}
               </span>
             </template>
           </el-table-column>
           <el-table-column label="最新日期" width="120">
             <template #default="{ row }">
-              <span v-if="row.latest_date" class="text-xs">{{ row.latest_date }}</span>
+              <span v-if="row.latest_date" class="text-xs">{{
+                row.latest_date
+              }}</span>
               <span v-else class="text-gray-400 text-xs">-</span>
             </template>
           </el-table-column>
           <el-table-column label="最后更新" width="150">
             <template #default="{ row }">
-              <span v-if="row.last_updated" class="text-xs">{{ row.last_updated }}</span>
+              <span v-if="row.last_updated" class="text-xs">{{
+                row.last_updated
+              }}</span>
               <span v-else class="text-gray-400 text-xs">-</span>
             </template>
           </el-table-column>

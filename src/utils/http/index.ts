@@ -83,9 +83,9 @@ class PureHttp {
                     PureHttp.isRefreshing = true;
                     // token过期刷新
                     useUserStoreHook()
-                      .handRefreshToken({ refreshToken: data.refreshToken })
+                      .handRefreshToken({ refresh_token: data.refresh_token })
                       .then(res => {
-                        const token = res.data.accessToken;
+                        const token = res.data.access_token;
                         config.headers["Authorization"] = formatToken(token);
                         PureHttp.requests.forEach(cb => cb(token));
                         PureHttp.requests = [];
@@ -97,7 +97,7 @@ class PureHttp {
                   resolve(PureHttp.retryOriginalRequest(config));
                 } else {
                   config.headers["Authorization"] = formatToken(
-                    data.accessToken
+                    data.access_token
                   );
                   resolve(config);
                 }

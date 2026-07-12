@@ -243,15 +243,17 @@ onMounted(() => {
           @keyup.enter="handleSearch"
         />
 
-        <el-button type="primary" size="small" @click="handleSearch">查询</el-button>
+        <el-button type="primary" size="small" @click="handleSearch"
+          >查询</el-button
+        >
         <el-button size="small" @click="handleReset">重置</el-button>
       </div>
 
       <!-- 表格 -->
-      <div class="flex-1 overflow-auto" v-if="selectedTable">
+      <div v-if="selectedTable" class="flex-1 overflow-auto">
         <el-table
-          :data="rows"
           v-loading="dataLoading"
+          :data="rows"
           stripe
           border
           size="small"

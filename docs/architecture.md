@@ -1,173 +1,103 @@
 # Ying+ 管理后台前端架构文档
 
-## 项目概述
-
-基于 vue-pure-admin 模板的后台管理系统，管理股票数据、定时任务、用户权限等。
-
 ## 技术栈
 
-| 技术 | 版本 | 用途 |
-|------|------|------|
-| Vue | 3.5 | 核心框架 |
-| TypeScript | 5.9 | 类型安全 |
-| Vite | 7.1 | 构建工具 |
-| Element Plus | 2.11 | UI 组件库 |
-| Pinia | 3.0 | 状态管理 |
-| Tailwind CSS | 4.1 | 原子化 CSS |
-| ECharts | 6.0 | 图表可视化 |
-| Axios | 1.12 | HTTP 请求 |
+Vue 3.5 + TypeScript + Vite 7 + Element Plus + Pinia + Tailwind CSS
+基于 vue-pure-admin 模板。
 
 ## 目录结构
 
 ```
-trade_admin/src/
-├── api/                    # 后端 API 调用封装
+src/
+├── api/                    # API 封装
 │   ├── user.ts             # 登录/刷新token
-│   ├── routes.ts           # 动态路由获取
-│   ├── admin.ts            # 用户管理/菜单管理/角色管理
-│   ├── scheduler.ts        # 定时任务管理
+│   ├── routes.ts           # 动态路由
+│   ├── admin.ts            # 用户/菜单/角色管理
+│   ├── scheduler.ts        # 定时任务
 │   ├── sync.ts             # 数据同步
-│   └── datasource.ts       # 数据源管理（如有）
+│   ├── aggregation.ts      # 聚合数据看板（分时资金、涨停天梯）
+│   ├── limit-up-ladder.ts  # 涨停天梯同步/任务配置
+│   └── h5-page.ts          # H5 页面管理
 ├── views/
-│   ├── login/              # 登录页
+│   ├── login/              # 登录
 │   ├── welcome/            # 控制台首页
-│   ├── data/               # 数据管理模块
-│   │   ├── browser/        # 数据浏览
-│   │   ├── scheduler/      # 定时任务（配置+执行日志双Tab）
+│   ├── data/
+│   │   ├── scheduler/      # 定时任务配置
 │   │   ├── sync/           # 数据同步（概览+手动触发+表状态）
-│   │   └── source(s)/      # 数据源管理（接口列表+权限检测）
-│   ├── system/             # 系统管理模块
+│   │   ├── logs/           # 执行日志（定时+手动统一展示）
+│   │   ├── browser/        # 数据浏览
+│   │   ├── source(s)/      # 数据源管理（权限检测）
+│   │   ├── aggregation/    # 聚合数据（分时资金/涨停天梯看板）
+│   │   └── limit-up-ladder/# 涨停天梯同步与调度配置
+│   ├── content/
+│   │   └── h5/             # H5 页面管理
+│   ├── system/
 │   │   ├── user/           # 用户管理
 │   │   ├── role/           # 角色管理
 │   │   └── menu/           # 菜单管理
-│   └── error/              # 错误页面
-├── router/
-│   ├── index.ts            # 路由实例 + 守卫 + 动态路由加载
-│   └── modules/            # 静态路由
-├── store/modules/
-│   ├── user.ts             # 用户状态
-│   └── permission.ts       # 权限/动态路由
-├── utils/
-│   ├── http/index.ts       # Axios 封装（自动刷新token）
-│   └── auth.ts             # Token 存储
-└── layout/                 # 后台布局框架
+│   └── error/
+├── router/                 # 静态路由 + 动态路由加载
+├── store/modules/          # Pinia 状态
+├── utils/http/             # Axios 封装（自动刷新token）
+└── layout/                 # 后台布局
 ```
 
-## 页面功能清单
-
-### 已完成 ✅
-
-| 页面 | 路由 | 功能 |
-|------|------|------|
-| 登录 | /login | 邮箱+密码登录，对接后端 |
-| 控制台 | /welcome | 欢迎页 |
-| 用户管理 | /system/user | 列表+分页+搜索+编辑角色/状态+重置密码 |
-| 角色管理 | /system/role | 角色列表+菜单权限分配 |
-| 菜单管理 | /system/menu | 树形菜单CRUD |
-| 定时任务 | /data/scheduler | 任务列表+编辑配置+启停+手动执行+执行日志Tab |
-| 数据同步 | /data/sync | 概览统计+手动触发13种同步+所有表数据状态 |
-| 数据源管理 | /data/source(s) | 239个接口列表+分类筛选+搜索+权限检测 |
-| 数据浏览 | /data/browser | 本地表数据浏览查询 |
-
-### 菜单结构（数据库 admin_menus）
+## 菜单结构（数据库 admin_menus）
 
 ```
 数据管理 (id=10, rank=5)
-├── 定时任务 (id=11) → DataScheduler → data/scheduler/index
-├── 数据同步 (id=12) → DataSync → data/sync/index
-├── 数据浏览 (id=13) → DataBrowser → data/browser/index
-└── 数据源管理 (id=14) → DataSources → data/sources/index
+├── 定时任务 (id=11) → data/scheduler/index
+├── 数据同步 (id=12) → data/sync/index
+├── 数据浏览 (id=13) → data/browser/index
+├── 数据源管理 (id=15) → data/source/index
+├── 执行日志 (id=16) → data/logs/index
+└── 聚合数据 (id=18, directory) → /data/aggregation
+    ├── 聚合概览 (id=19) → data/aggregation/index
+    └── 涨停天梯 (id=17) → data/limit-up-ladder/index
 
 系统管理 (id=1, rank=10)
-├── 用户管理 (id=2) → SystemUser → system/user/index
-├── 角色管理 (id=3) → SystemRole → system/role/index
-└── 菜单管理 (id=4) → SystemMenu → system/menu/index
+├── 用户管理 (id=2) → system/user/index
+├── 角色管理 (id=3) → system/role/index
+└── 菜单管理 (id=4) → system/menu/index
 ```
 
-## 核心机制
+## 页面功能
 
-### 认证流程
+| 页面 | 功能 |
+|------|------|
+| 定时任务 | 14个任务列表，编辑触发时间/天数，启用/禁用，手动执行 |
+| 数据同步 | 概览统计（表数/数据量），13个手动同步按钮，所有表状态分类展示 |
+| 执行日志 | 统一查看定时任务+手动同步的所有日志，按任务/状态筛选，分页 |
+| 数据源管理 | 239个Tushare接口列表，分类筛选，权限检测（有/无/未检测） |
+| 数据浏览 | 查询本地表数据 |
+| 聚合概览 | 分时K线状态、涨停天梯、概念/行业/个股分时资金 Tab 展示 |
+| 涨停天梯 | 涨停板天梯数据同步、依赖表状态、自动调度任务配置 |
+| H5页面管理 | H5 内容页面 CRUD（Markdown/富文本） |
+| 用户管理 | CRUD + 角色分配 + 密码重置 |
+| 角色管理 | 菜单权限分配 |
+| 菜单管理 | 树形 CRUD |
 
-1. `POST /api/v1/admin/login` → 返回 accessToken/refreshToken/roles/permissions
-2. Token 存 localStorage，Axios 拦截器自动附加 Authorization header
-3. Token 过期时自动调 `/api/v1/admin/refresh-token` 刷新
-4. 登录后调 `GET /api/v1/admin/async-routes` 加载动态菜单
+## 认证
 
-### 动态路由
+1. POST /api/v1/admin/login → accessToken + refreshToken
+2. Axios 拦截器自动附加 Authorization header
+3. Token 过期自动刷新
+4. 登录后加载动态路由（GET /api/v1/admin/async-routes）
 
-后端 `admin_menus` 表存菜单树 → 前端登录后请求 → 转为 vue-router 路由动态注册。
+## 后端 API 对接
 
-菜单数据格式：
-```json
-{
-  "path": "/data/scheduler/index",
-  "name": "DataScheduler",
-  "component": "data/scheduler/index",
-  "meta": { "title": "定时任务", "icon": "ep:timer" }
-}
-```
+**调度：** GET/POST /scheduler/jobs, PUT toggle, POST run, DELETE, GET /scheduler/logs
+**同步：** GET /sync/status, POST /sync/{type}
+**数据源：** GET /datasource/list, GET /datasource/categories, POST /datasource/check-permission
+**聚合数据：** GET /stocks/limit-up-ladder, GET/POST /analytics/intraday/{status,sync}, GET /analytics/concept-flow/minute, GET /analytics/industry-flow/minute, GET /analytics/stock-flow/minute
+**涨停天梯：** GET/PUT /admin/limit-up-ladder/job, POST /admin/limit-up-ladder/sync
+**管理：** /admin/login, /admin/refresh-token, /admin/async-routes, /admin/users, /admin/menus, /admin/roles
 
-### 权限控制
-
-- 页面级：路由 `meta.roles` + 路由守卫
-- 按钮级：`permissions` 数组（如 `system:user:add`）
-- admin 角色：`*:*:*` 全部权限
-
-## 后端 API 对接清单
-
-### 认证
-- `POST /api/v1/admin/login` — 登录
-- `POST /api/v1/admin/refresh-token` — 刷新token
-- `GET /api/v1/admin/async-routes` — 动态菜单
-
-### 用户管理
-- `GET /api/v1/admin/users` — 列表（分页+搜索+角色筛选）
-- `PUT /api/v1/admin/users/:id` — 编辑
-- `PUT /api/v1/admin/users/:id/reset-password` — 重置密码
-
-### 菜单管理
-- `GET /api/v1/admin/menus` — 菜单树
-- `POST /api/v1/admin/menus` — 新增
-- `PUT /api/v1/admin/menus/:id` — 编辑
-- `DELETE /api/v1/admin/menus/:id` — 删除
-
-### 角色管理
-- `GET /api/v1/admin/roles` — 角色列表
-- `PUT /api/v1/admin/roles/:role/menus` — 分配菜单权限
-
-### 定时任务
-- `GET /api/v1/scheduler/jobs` — 任务列表
-- `GET /api/v1/scheduler/available` — 可配置任务类型
-- `POST /api/v1/scheduler/jobs` — 创建/更新配置
-- `PUT /api/v1/scheduler/jobs/:id/toggle` — 启用/禁用
-- `POST /api/v1/scheduler/jobs/:id/run` — 立即执行
-- `DELETE /api/v1/scheduler/jobs/:id` — 删除
-- `GET /api/v1/scheduler/logs` — 执行日志
-
-### 数据同步
-- `GET /api/v1/sync/status` — 所有本地表数据概况
-- `POST /api/v1/sync/recent` — 综合同步
-- `POST /api/v1/sync/{type}` — 按类型同步（daily-kline/daily-basic/...）
-
-### 数据源
-- `GET /api/v1/datasource/list` — 接口列表
-- `GET /api/v1/datasource/categories` — 分类列表
-- `POST /api/v1/datasource/check-permission` — 批量权限检测
-
-## 开发环境
+## 开发
 
 ```bash
-pnpm install
-pnpm dev          # http://localhost:8848
-pnpm build        # 生产构建
+pnpm install && pnpm dev    # http://localhost:8848
 ```
 
-Vite proxy 配置：`/api` → `http://127.0.0.1:8000`
-
-## 约定
-
-- 组件命名：PascalCase（`DataScheduler`）
-- API 文件：按模块划分（`src/api/`）
-- 路由：静态放 `router/modules/`，动态从后端获取
-- 样式：优先 Tailwind，复杂用 SCSS
-- 测试账号：`1538933906@qq.com` / `123456`（admin角色）
+Vite proxy：`/api` → `http://127.0.0.1:8000`
+测试账号：`1538933906@qq.com` / `123456`

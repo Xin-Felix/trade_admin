@@ -38,8 +38,10 @@ async function loadData() {
     };
     if (filterCategory.value) params.category = filterCategory.value;
     if (filterKeyword.value) params.keyword = filterKeyword.value;
-    if (filterPermission.value !== "") params.has_permission = filterPermission.value;
-    if (filterLocalTable.value !== "") params.has_local_table = filterLocalTable.value;
+    if (filterPermission.value !== "")
+      params.has_permission = filterPermission.value;
+    if (filterLocalTable.value !== "")
+      params.has_local_table = filterLocalTable.value;
 
     const res = await getDataSourceList(params);
     if (res.success) {
@@ -148,7 +150,7 @@ onMounted(() => {
 
     <!-- 表格 -->
     <el-card shadow="never">
-      <el-table :data="tableData" v-loading="loading" stripe size="small">
+      <el-table v-loading="loading" :data="tableData" stripe size="small">
         <el-table-column prop="api_name" label="接口名" width="150" />
         <el-table-column prop="title" label="中文名称" width="180" />
         <el-table-column prop="category" label="分类" width="120" />
@@ -174,7 +176,12 @@ onMounted(() => {
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="proxy_path" label="代理路径" min-width="160" show-overflow-tooltip />
+        <el-table-column
+          prop="proxy_path"
+          label="代理路径"
+          min-width="160"
+          show-overflow-tooltip
+        />
         <el-table-column label="权限说明" min-width="200" show-overflow-tooltip>
           <template #default="{ row }">
             <span v-if="row.permission_msg" class="text-xs text-gray-500">
