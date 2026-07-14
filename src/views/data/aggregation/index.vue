@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import {
   getIntradayStatus,
+  getIntradayStatusAll,
   syncIntradayData,
+  triggerRealtimeSnapshot,
   getLimitUpLadder,
   getConceptMinuteFlow,
   getIndustryMinuteFlow,
-  getStockMinuteFlow,
-  type LimitUpConceptTag,
-  type LimitUpLadderGroup,
-  type LimitUpStockItem
+  getStockMinuteFlow
 } from "@/api/aggregation";
+import { runJobNow } from "@/api/dataCenter";
 
 defineOptions({
   name: "DataAggregation"
@@ -20,21 +20,26 @@ defineOptions({
 const activeTab = ref("limitup");
 const tradeDate = ref("");
 const loading = ref(false);
+const snapshotLoading = ref(false);
 
+// 数据状态
+const allDaysStatus = ref<{ trade_date: string; records: number; stocks: number }[]>([]);
 const intradayStatus = ref<any>(null);
 const limitUpData = ref<any>(null);
 const conceptFlow = ref<any[]>([]);
 const industryFlow = ref<any[]>([]);
 const stockCode = ref("000001.SZ");
 const stockFlow = ref<any>(null);
-
 const selectedConcept = ref<any>(null);
 const conceptDialogVisible = ref(false);
-
 const selectedIndustry = ref<any>(null);
 const industryDialogVisible = ref(false);
 
 const today = computed(() => new Date().toISOString().slice(0, 10));
+const latestDataDate = computed(() => {
+  if (allDaysStatus.value.length > 0) return allDaysStatus.value[0].trade_date;
+  return null;
+});
 
 function toYmd(iso: string): string {
   return iso.replace(/-/g, "");
@@ -44,14 +49,25 @@ async function loadAll() {
   loading.value = true;
   try {
     await Promise.all([
+      loadAllDaysStatus(),
       loadIntradayStatus(),
       loadLimitUp(),
       loadConceptFlow(),
-      loadIndustryFlow(),
-      loadStockFlow()
+      loadIndustryFlow()
     ]);
   } finally {
     loading.value = false;
+  }
+}
+
+async function loadAllDaysStatus() {
+  try {
+    const res = await getIntradayStatusAll();
+    if (res.success) {
+      allDaysStatus.value = res.data.days || [];
+    }
+  } catch {
+    allDaysStatus.value = [];
   }
 }
 
@@ -61,7 +77,7 @@ async function loadIntradayStatus() {
     if (res.success) {
       intradayStatus.value = res.data;
     }
-  } catch (e: any) {
+  } catch {
     intradayStatus.value = null;
   }
 }
@@ -75,7 +91,7 @@ async function loadLimitUp() {
     if (res.success) {
       limitUpData.value = res.data;
     }
-  } catch (e: any) {
+  } catch {
     limitUpData.value = null;
   }
 }
@@ -86,7 +102,7 @@ async function loadConceptFlow() {
     if (res.success) {
       conceptFlow.value = res.data.concepts || [];
     }
-  } catch (e: any) {
+  } catch {
     conceptFlow.value = [];
   }
 }
@@ -97,7 +113,7 @@ async function loadIndustryFlow() {
     if (res.success) {
       industryFlow.value = res.data.industries || [];
     }
-  } catch (e: any) {
+  } catch {
     industryFlow.value = [];
   }
 }
@@ -111,31 +127,65 @@ async function loadStockFlow() {
     if (res.success) {
       stockFlow.value = res.data;
     }
-  } catch (e: any) {
+  } catch {
     stockFlow.value = null;
   }
 }
 
+// 快捷选择日期
+function selectDate(d: string) {
+  tradeDate.value = d;
+  loadAll();
+}
+
+// 触发实时快照
+async function handleSnapshot() {
+  snapshotLoading.value = true;
+  try {
+    const res = await triggerRealtimeSnapshot();
+    if (res.success) {
+      ElMessage.success("实时快照已触发（约5-10秒完成）");
+      // 10秒后自动刷新状态
+      setTimeout(() => {
+        loadAllDaysStatus();
+        loadIntradayStatus();
+      }, 10000);
+    }
+  } catch (e: any) {
+    ElMessage.error(e?.message || "触发失败");
+  } finally {
+    snapshotLoading.value = false;
+  }
+}
+
+// 触发历史分时数据采集
 async function handleSyncIntraday() {
   try {
     await ElMessageBox.confirm(
-      "确定触发全市场分时数据采集吗？预计耗时较长。",
+      "确定触发全市场历史分时数据采集吗？预计耗时较长（每天约45分钟）。",
       "提示",
-      {
-        type: "warning"
-      }
+      { type: "warning" }
     );
   } catch {
     return;
   }
   try {
-    const res = await syncIntradayData(5);
+    const res = await syncIntradayData(1);
     if (res.success) {
       ElMessage.success(res.data.message || "同步已启动");
     }
   } catch (e: any) {
-    const detail = e?.response?.data?.detail || "启动失败";
-    ElMessage.error(detail);
+    ElMessage.error("启动失败");
+  }
+}
+
+// 触发涨停数据同步
+async function handleSyncLimitUp() {
+  try {
+    await runJobNow("sync_limit_data", 1);
+    ElMessage.success("涨停数据同步已触发");
+  } catch {
+    ElMessage.error("触发失败");
   }
 }
 
@@ -151,12 +201,8 @@ function openIndustryDetail(row: any) {
 
 function formatMoney(val?: number): string {
   if (val == null) return "-";
-  if (Math.abs(val) >= 1e8) {
-    return (val / 1e8).toFixed(2) + " 亿";
-  }
-  if (Math.abs(val) >= 1e4) {
-    return (val / 1e4).toFixed(2) + " 万";
-  }
+  if (Math.abs(val) >= 1e8) return (val / 1e8).toFixed(2) + " 亿";
+  if (Math.abs(val) >= 1e4) return (val / 1e4).toFixed(2) + " 万";
   return val.toFixed(2);
 }
 
@@ -173,46 +219,83 @@ onMounted(() => {
 
 <template>
   <div class="p-4 space-y-4">
-    <!-- 顶部操作 -->
+    <!-- 数据状态总览 -->
     <el-card shadow="never">
       <template #header>
         <div class="flex items-center justify-between">
-          <span class="font-semibold text-lg">聚合数据</span>
-          <el-tag type="warning" size="small"
-            >依赖 stock_intraday 分时K线</el-tag
-          >
+          <div class="flex items-center gap-3">
+            <span class="font-semibold text-lg">聚合数据</span>
+            <el-tag v-if="latestDataDate" type="success" size="small">
+              最新数据: {{ latestDataDate }}
+            </el-tag>
+            <el-tag v-else type="warning" size="small">暂无分时数据</el-tag>
+          </div>
+          <div class="flex gap-2">
+            <el-button
+              type="success"
+              size="small"
+              :loading="snapshotLoading"
+              @click="handleSnapshot"
+            >
+              实时快照
+            </el-button>
+            <el-button size="small" @click="handleSyncLimitUp">
+              刷涨停数据
+            </el-button>
+            <el-button size="small" @click="handleSyncIntraday">
+              历史分时采集
+            </el-button>
+          </div>
         </div>
       </template>
 
-      <div class="flex gap-3 flex-wrap items-center">
+      <!-- 可用日期标签 + 日期选择 -->
+      <div class="flex items-center gap-3 flex-wrap">
+        <span class="text-sm text-gray-500">可用日期:</span>
+        <el-tag
+          v-for="day in allDaysStatus"
+          :key="day.trade_date"
+          :type="day.trade_date === tradeDate ? 'primary' : 'info'"
+          :effect="day.trade_date === tradeDate ? 'dark' : 'plain'"
+          size="small"
+          class="cursor-pointer"
+          @click="selectDate(day.trade_date)"
+        >
+          {{ day.trade_date.slice(5) }}
+          <span class="text-xs opacity-70 ml-1">({{ day.stocks }}股)</span>
+        </el-tag>
         <el-date-picker
           v-model="tradeDate"
           type="date"
-          placeholder="选择交易日"
+          placeholder="选日期"
           value-format="YYYY-MM-DD"
-          style="width: 160px"
+          size="small"
+          style="width: 140px"
           @change="loadAll"
         />
-        <el-button type="primary" :loading="loading" @click="loadAll"
-          >刷新</el-button
-        >
-        <el-button @click="handleSyncIntraday">触发分时采集</el-button>
+        <el-button type="primary" size="small" :loading="loading" @click="loadAll">
+          刷新
+        </el-button>
       </div>
-    </el-card>
 
-    <!-- 分时数据概览 -->
-    <el-card v-if="intradayStatus" shadow="never" class="mb-4">
-      <div class="grid grid-cols-4 gap-4">
-        <el-statistic title="交易日" :value="intradayStatus.trade_date" />
-        <el-statistic
-          title="分时记录数"
-          :value="intradayStatus.total_records"
-        />
-        <el-statistic title="覆盖股票数" :value="intradayStatus.total_stocks" />
-        <el-statistic
-          title="预期分钟数"
-          :value="intradayStatus.minutes_per_day"
-        />
+      <!-- 当前日期数据概览 -->
+      <div v-if="intradayStatus" class="grid grid-cols-4 gap-4 mt-4">
+        <div class="text-center">
+          <div class="text-xl font-bold text-blue-600">{{ intradayStatus.trade_date || "-" }}</div>
+          <div class="text-xs text-gray-500">当前交易日</div>
+        </div>
+        <div class="text-center">
+          <div class="text-xl font-bold text-green-600">{{ (intradayStatus.total_records || 0).toLocaleString() }}</div>
+          <div class="text-xs text-gray-500">分时记录数</div>
+        </div>
+        <div class="text-center">
+          <div class="text-xl font-bold text-purple-600">{{ intradayStatus.total_stocks || 0 }}</div>
+          <div class="text-xs text-gray-500">覆盖股票数</div>
+        </div>
+        <div class="text-center">
+          <div class="text-xl font-bold text-orange-600">{{ intradayStatus.minutes_per_day || 241 }}</div>
+          <div class="text-xs text-gray-500">每股分钟数</div>
+        </div>
       </div>
     </el-card>
 
@@ -221,12 +304,9 @@ onMounted(() => {
       <!-- 涨停天梯 -->
       <el-tab-pane label="涨停天梯" name="limitup">
         <div v-if="limitUpData" class="space-y-4">
-          <!-- 概念标签 -->
           <el-card shadow="never">
             <template #header>
-              <span class="font-medium"
-                >顶部概念（{{ limitUpData.trade_date }}）</span
-              >
+              <span class="font-medium">顶部概念（{{ limitUpData.trade_date }}）</span>
             </template>
             <div class="flex flex-wrap gap-2">
               <el-tag
@@ -240,8 +320,6 @@ onMounted(() => {
               </el-tag>
             </div>
           </el-card>
-
-          <!-- 连板天梯 -->
           <el-card
             v-for="group in limitUpData.ladder"
             :key="group.step"
@@ -273,13 +351,9 @@ onMounted(() => {
               </el-table-column>
             </el-table>
           </el-card>
-
-          <!-- 炸板 -->
           <el-card v-if="limitUpData.opened_limit?.length" shadow="never">
             <template #header>
-              <span class="font-medium"
-                >炸板（{{ limitUpData.opened_limit.length }}）</span
-              >
+              <span class="font-medium">炸板（{{ limitUpData.opened_limit.length }}）</span>
             </template>
             <el-table :data="limitUpData.opened_limit" size="small" stripe>
               <el-table-column prop="name" label="名称" width="120" />
@@ -308,9 +382,7 @@ onMounted(() => {
             <template #default="{ row }">
               <span class="text-red-500">+{{ formatMoney(row.inflow) }}</span>
               /
-              <span class="text-green-500"
-                >-{{ formatMoney(row.outflow) }}</span
-              >
+              <span class="text-green-500">-{{ formatMoney(row.outflow) }}</span>
             </template>
           </el-table-column>
           <el-table-column label="涨跌家数" width="120">
@@ -327,9 +399,7 @@ onMounted(() => {
           </el-table-column>
           <el-table-column label="操作" width="100">
             <template #default="{ row }">
-              <el-button link size="small" @click="openConceptDetail(row)"
-                >分钟</el-button
-              >
+              <el-button link size="small" @click="openConceptDetail(row)">分钟</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -350,9 +420,7 @@ onMounted(() => {
             <template #default="{ row }">
               <span class="text-red-500">+{{ formatMoney(row.inflow) }}</span>
               /
-              <span class="text-green-500"
-                >-{{ formatMoney(row.outflow) }}</span
-              >
+              <span class="text-green-500">-{{ formatMoney(row.outflow) }}</span>
             </template>
           </el-table-column>
           <el-table-column label="涨跌家数" width="120">
@@ -369,9 +437,7 @@ onMounted(() => {
           </el-table-column>
           <el-table-column label="操作" width="100">
             <template #default="{ row }">
-              <el-button link size="small" @click="openIndustryDetail(row)"
-                >分钟</el-button
-              >
+              <el-button link size="small" @click="openIndustryDetail(row)">分钟</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -387,22 +453,11 @@ onMounted(() => {
           />
           <el-button type="primary" @click="loadStockFlow">查询</el-button>
         </div>
-
         <el-card v-if="stockFlow" shadow="never">
           <template #header>
-            <span class="font-medium"
-              >{{ stockFlow.ts_code }}（{{
-                stockFlow.total_minutes
-              }}
-              分钟）</span
-            >
+            <span class="font-medium">{{ stockFlow.ts_code }}（{{ stockFlow.total_minutes }} 分钟）</span>
           </template>
-          <el-table
-            :data="stockFlow.minutes"
-            size="small"
-            stripe
-            max-height="600"
-          >
+          <el-table :data="stockFlow.minutes" size="small" stripe max-height="600">
             <el-table-column prop="time" label="时间" width="80" />
             <el-table-column prop="close" label="收盘价" width="90" />
             <el-table-column label="净流入" width="120">
@@ -412,17 +467,9 @@ onMounted(() => {
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column
-              prop="cumulative_net"
-              label="累计净流入"
-              width="120"
-            >
+            <el-table-column label="累计净流入" width="120">
               <template #default="{ row }">
-                <span
-                  :class="
-                    row.cumulative_net >= 0 ? 'text-red-500' : 'text-green-500'
-                  "
-                >
+                <span :class="row.cumulative_net >= 0 ? 'text-red-500' : 'text-green-500'">
                   {{ formatMoney(row.cumulative_net) }}
                 </span>
               </template>
@@ -444,84 +491,48 @@ onMounted(() => {
     </el-tabs>
 
     <!-- 概念分钟详情弹窗 -->
-    <el-dialog
-      v-model="conceptDialogVisible"
-      :title="selectedConcept?.concept_name + ' 分钟走势'"
-      width="700px"
-    >
-      <el-table
-        v-if="selectedConcept"
-        :data="selectedConcept.minutes"
-        size="small"
-        stripe
-        max-height="500"
-      >
+    <el-dialog v-model="conceptDialogVisible" :title="selectedConcept?.concept_name + ' 分钟走势'" width="700px">
+      <el-table v-if="selectedConcept" :data="selectedConcept.minutes" size="small" stripe max-height="500">
         <el-table-column prop="time" label="时间" width="80" />
         <el-table-column prop="net_inflow" label="净流入" width="120">
           <template #default="{ row }">
-            <el-tag :type="flowTagType(row.net_inflow)" size="small">{{
-              formatMoney(row.net_inflow)
-            }}</el-tag>
+            <el-tag :type="flowTagType(row.net_inflow)" size="small">{{ formatMoney(row.net_inflow) }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="cumulative_net" label="累计净流入" width="120">
           <template #default="{ row }">
-            <span
-              :class="
-                row.cumulative_net >= 0 ? 'text-red-500' : 'text-green-500'
-              "
-            >
+            <span :class="row.cumulative_net >= 0 ? 'text-red-500' : 'text-green-500'">
               {{ formatMoney(row.cumulative_net) }}
             </span>
           </template>
         </el-table-column>
         <el-table-column label="涨跌家数" width="100">
           <template #default="{ row }">
-            <span class="text-red-500">{{ row.up_count }}</span
-            >/
-            <span class="text-green-500">{{ row.down_count }}</span>
+            <span class="text-red-500">{{ row.up_count }}</span>/<span class="text-green-500">{{ row.down_count }}</span>
           </template>
         </el-table-column>
       </el-table>
     </el-dialog>
 
     <!-- 行业分钟详情弹窗 -->
-    <el-dialog
-      v-model="industryDialogVisible"
-      :title="selectedIndustry?.concept_name + ' 分钟走势'"
-      width="700px"
-    >
-      <el-table
-        v-if="selectedIndustry"
-        :data="selectedIndustry.minutes"
-        size="small"
-        stripe
-        max-height="500"
-      >
+    <el-dialog v-model="industryDialogVisible" :title="selectedIndustry?.concept_name + ' 分钟走势'" width="700px">
+      <el-table v-if="selectedIndustry" :data="selectedIndustry.minutes" size="small" stripe max-height="500">
         <el-table-column prop="time" label="时间" width="80" />
         <el-table-column prop="net_inflow" label="净流入" width="120">
           <template #default="{ row }">
-            <el-tag :type="flowTagType(row.net_inflow)" size="small">{{
-              formatMoney(row.net_inflow)
-            }}</el-tag>
+            <el-tag :type="flowTagType(row.net_inflow)" size="small">{{ formatMoney(row.net_inflow) }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="cumulative_net" label="累计净流入" width="120">
           <template #default="{ row }">
-            <span
-              :class="
-                row.cumulative_net >= 0 ? 'text-red-500' : 'text-green-500'
-              "
-            >
+            <span :class="row.cumulative_net >= 0 ? 'text-red-500' : 'text-green-500'">
               {{ formatMoney(row.cumulative_net) }}
             </span>
           </template>
         </el-table-column>
         <el-table-column label="涨跌家数" width="100">
           <template #default="{ row }">
-            <span class="text-red-500">{{ row.up_count }}</span
-            >/
-            <span class="text-green-500">{{ row.down_count }}</span>
+            <span class="text-red-500">{{ row.up_count }}</span>/<span class="text-green-500">{{ row.down_count }}</span>
           </template>
         </el-table-column>
       </el-table>

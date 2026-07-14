@@ -57,6 +57,27 @@ export interface WatchlistStockItem {
   pb?: number;
   turnover_rate?: number;
   error?: string;
+  type?: string;
+}
+
+export interface PortfolioStockItem {
+  code: string;
+  name: string;
+  ts_code?: string;
+  price?: number;
+  change_percent?: number;
+  cost_price?: number;
+  quantity?: number;
+  is_margin?: boolean;
+  profit?: number;
+  profit_pct?: number;
+  market_value?: number;
+  pe?: number;
+  pb?: number;
+  turnover_rate?: number;
+  note?: string;
+  error?: string;
+  type?: string;
 }
 
 export interface DailyReviewWatchlistResult {
@@ -66,8 +87,10 @@ export interface DailyReviewWatchlistResult {
     user_public_id?: string;
     user_email?: string;
     report_date?: string;
-    stocks: WatchlistStockItem[];
-    stock_count: number;
+    portfolio: PortfolioStockItem[];
+    watchlist: WatchlistStockItem[];
+    portfolio_count: number;
+    watchlist_count: number;
   };
 }
 

@@ -92,14 +92,14 @@ export const syncIntradayData = (days: number = 5) => {
   );
 };
 
-/** 涨停天梯聚合数据 */
+/** 涨停天梯聚合数据（管理端，不消费积分） */
 export const getLimitUpLadder = (
   trade_date?: string,
   top_n_concepts: number = 30
 ) => {
   return http.request<LimitUpLadderResult>(
     "get",
-    "/api/v1/stocks/limit-up-ladder",
+    "/api/v1/admin/limit-up-ladder/data",
     {
       params: { trade_date, top_n_concepts }
     }
@@ -137,4 +137,20 @@ export const getStockMinuteFlow = (code: string, trade_date?: string) => {
     "/api/v1/analytics/stock-flow/minute",
     { params: { code, trade_date } }
   );
+};
+
+/** 触发实时快照采集（盘中，约5-10秒） */
+export const triggerRealtimeSnapshot = () => {
+  return http.request<{ success: boolean; data: any }>(
+    "post",
+    "/api/v1/analytics/intraday/snapshot"
+  );
+};
+
+/** 获取所有交易日分时数据汇总 */
+export const getIntradayStatusAll = () => {
+  return http.request<{
+    success: boolean;
+    data: { days: { trade_date: string; records: number; stocks: number }[]; total_days: number };
+  }>("get", "/api/v1/analytics/intraday/status");
 };

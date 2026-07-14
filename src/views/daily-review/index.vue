@@ -15,7 +15,8 @@ import {
   retryFailedDailyReviews,
   type DailyReviewItem,
   type DailyReviewUser,
-  type WatchlistStockItem
+  type WatchlistStockItem,
+  type PortfolioStockItem
 } from "@/api/daily-review";
 
 defineOptions({
@@ -48,6 +49,7 @@ const detailVisible = ref(false);
 const detailLoading = ref(false);
 const currentDetail = ref<DailyReviewItem | null>(null);
 const watchlistData = ref<WatchlistStockItem[]>([]);
+const portfolioData = ref<PortfolioStockItem[]>([]);
 const watchlistLoading = ref(false);
 
 const editMode = ref(false);
@@ -121,6 +123,7 @@ async function handleViewDetail(row: any) {
   editMode.value = false;
   currentDetail.value = null;
   watchlistData.value = [];
+  portfolioData.value = [];
   try {
     const [detailRes, watchlistRes] = await Promise.all([
       getDailyReviewDetail(row.id),
@@ -132,7 +135,8 @@ async function handleViewDetail(row: any) {
       editContent.value = detailRes.data.content || "";
     }
     if (watchlistRes.success) {
-      watchlistData.value = watchlistRes.data.stocks || [];
+      portfolioData.value = watchlistRes.data.portfolio || [];
+      watchlistData.value = watchlistRes.data.watchlist || [];
     }
   } finally {
     detailLoading.value = false;
@@ -477,30 +481,103 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- 自选股数据 -->
+        <!-- 持仓数据 -->
         <el-card shadow="never" class="mb-4">
           <template #header>
-            <span class="font-semibold">用户自选股数据（生成依据）</span>
+            <span class="font-semibold">用户持仓数据（生成依据）</span>
           </template>
           <el-skeleton v-if="watchlistLoading" :rows="3" animated />
           <el-table
-            v-else
+            v-else-if="portfolioData.length > 0"
+            :data="portfolioData"
+            stripe
+            size="small"
+            max-height="280"
+          >
+            <el-table-column prop="name" label="名称" width="100" />
+            <el-table-column prop="code" label="代码" width="90" />
+            <el-table-column label="现价" width="80" align="right">
+              <template #default="{ row }">
+                {{ row.price != null ? row.price : '-' }}
+              </template>
+            </el-table-column>
+            <el-table-column label="涨跌幅" width="90" align="right">
+              <template #default="{ row }">
+                <span
+                  v-if="row.change_percent != null"
+                  :class="row.change_percent >= 0 ? 'text-red-500' : 'text-green-500'"
+                >
+                  {{ row.change_percent >= 0 ? '+' : '' }}{{ row.change_percent }}%
+                </span>
+                <span v-else>-</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="成本" width="80" align="right">
+              <template #default="{ row }">
+                {{ row.cost_price != null ? row.cost_price : '-' }}
+              </template>
+            </el-table-column>
+            <el-table-column label="数量" width="80" align="right">
+              <template #default="{ row }">
+                {{ row.quantity != null ? row.quantity : '-' }}
+              </template>
+            </el-table-column>
+            <el-table-column label="浮动盈亏" width="100" align="right">
+              <template #default="{ row }">
+                <span
+                  v-if="row.profit != null"
+                  :class="row.profit >= 0 ? 'text-red-500' : 'text-green-500'"
+                >
+                  {{ row.profit >= 0 ? '+' : '' }}{{ row.profit }}
+                </span>
+                <span v-else>-</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="收益率" width="90" align="right">
+              <template #default="{ row }">
+                <span
+                  v-if="row.profit_pct != null"
+                  :class="row.profit_pct >= 0 ? 'text-red-500' : 'text-green-500'"
+                >
+                  {{ row.profit_pct >= 0 ? '+' : '' }}{{ row.profit_pct }}%
+                </span>
+                <span v-else>-</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="融资" width="60" align="center">
+              <template #default="{ row }">
+                <el-tag v-if="row.is_margin" type="warning" size="small">是</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="note" label="备注" min-width="100" show-overflow-tooltip />
+          </el-table>
+          <div v-if="!watchlistLoading && portfolioData.length === 0" class="text-gray-400 py-4 text-center">
+            该用户没有持仓
+          </div>
+        </el-card>
+
+        <!-- 自选股数据 -->
+        <el-card v-if="watchlistData.length > 0" shadow="never" class="mb-4">
+          <template #header>
+            <span class="font-semibold">用户自选股（非持仓）</span>
+          </template>
+          <el-table
             :data="watchlistData"
             stripe
             size="small"
-            max-height="240"
+            max-height="200"
           >
             <el-table-column prop="name" label="名称" width="120" />
             <el-table-column prop="code" label="代码" width="100" />
             <el-table-column label="现价" width="100" align="right">
               <template #default="{ row }">
-                {{ row.price !== undefined ? row.price : '-' }}
+                {{ row.price != null ? row.price : '-' }}
               </template>
             </el-table-column>
             <el-table-column label="涨跌幅" width="100" align="right">
               <template #default="{ row }">
                 <span
-                  v-if="row.change_percent !== undefined"
+                  v-if="row.change_percent != null"
                   :class="row.change_percent >= 0 ? 'text-red-500' : 'text-green-500'"
                 >
                   {{ row.change_percent >= 0 ? '+' : '' }}{{ row.change_percent }}%
@@ -511,11 +588,7 @@ onMounted(() => {
             <el-table-column prop="pe" label="PE" width="80" align="right" />
             <el-table-column prop="pb" label="PB" width="80" align="right" />
             <el-table-column prop="turnover_rate" label="换手%" width="90" align="right" />
-            <el-table-column prop="error" label="备注" min-width="160" show-overflow-tooltip />
           </el-table>
-          <div v-if="!watchlistLoading && watchlistData.length === 0" class="text-gray-400 py-4 text-center">
-            该用户没有自选股
-          </div>
         </el-card>
 
         <!-- 摘要 -->
