@@ -1,14 +1,18 @@
 # 阶段1：构建
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# 安装 pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# 安装 pnpm（锁定 v9 稳定版，兼容性好）
+RUN corepack enable && corepack prepare pnpm@9 --activate
+
+# 配置淘宝镜像和超时
+RUN echo "registry=https://registry.npmmirror.com" > /app/.npmrc && \
+    echo "network-timeout=600000" >> /app/.npmrc
 
 # 先复制依赖文件，利用缓存
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+RUN pnpm install
 
 # 复制源码并构建
 COPY . .
