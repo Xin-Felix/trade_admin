@@ -10,6 +10,7 @@ import {
   getJobLogs,
   getSyncStatus,
   syncConcepts,
+  backfillYear,
   type JobConfig,
   type JobGroup,
   type JobConfigForm,
@@ -288,6 +289,23 @@ async function handleSyncConcepts() {
   } catch {}
 }
 
+async function handleBackfillYear() {
+  try {
+    await ElMessageBox.confirm(
+      "将启动所有核心同步任务补全近一年数据（日K线、因子、资金流、龙虎榜等），预计需要10-20分钟，确定执行？",
+      "补全一年数据",
+      { type: "warning", confirmButtonText: "确定执行", cancelButtonText: "取消" }
+    );
+    const res = await backfillYear();
+    if (res.success) {
+      ElMessage.success(res.data.message || `已启动 ${res.data.total} 个任务`);
+      // 切到日志 tab 方便查看进度
+      activeTab.value = "logs";
+      setTimeout(fetchLogs, 2000);
+    }
+  } catch {}
+}
+
 function formatNumber(n: number): string {
   if (n >= 10000) return (n / 10000).toFixed(1) + "万";
   return n.toLocaleString();
@@ -500,6 +518,9 @@ onMounted(() => {
           </el-button>
           <el-button size="small" type="warning" @click="handleSyncConcepts">
             同步概念板块
+          </el-button>
+          <el-button size="small" type="danger" @click="handleBackfillYear">
+            补全一年数据
           </el-button>
         </div>
 

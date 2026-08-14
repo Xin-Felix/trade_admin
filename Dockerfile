@@ -12,6 +12,9 @@ RUN echo "registry=https://registry.npmmirror.com" > /app/.npmrc && \
 
 # 先复制依赖文件，利用缓存
 COPY package.json pnpm-lock.yaml ./
+
+# 增加 Node 内存限制（@iconify/json 包很大，需要更多内存解压）
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN pnpm install
 
 # 复制源码并构建

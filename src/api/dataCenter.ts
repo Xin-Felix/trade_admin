@@ -164,3 +164,11 @@ export const syncConcepts = () => {
     "/api/v1/sync/concept"
   );
 };
+
+/** 补全一年数据（批量执行所有核心同步任务，days=365） */
+export const backfillYear = () => {
+  return http.request<ApiResult<{ started: string[]; total: number; message: string }>>(
+    "post",
+    "/api/v1/scheduler/backfill-year"
+  );
+};
